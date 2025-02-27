@@ -2,42 +2,55 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <dwrite.h>
+#include <wrl/client.h>
 #include "dom.hpp"
 #include "parser.hpp"
 #include "layout.hpp"
 #include "render.hpp"
 
 std::shared_ptr<Box> layoutRoot;
+D2DResources g_d2dResources;
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-    case WM_SIZE:
-        if (!pRenderTarget) break;
+        case WM_SIZE:
+            if (g_d2dResources.renderTarget) {
+                RECT rc;
+                GetClientRect(hwnd, &rc);
+                g_d2dResources.RecreateRenderTarget(hwnd);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right);
+            }
+            break;
 
-        RECT rc;
-        GetClientRect(hwnd, &rc);
-        D2D1_SIZE_U size = D2D1::SizeU(rc.right, rc.bottom);
-        pRenderTarget->Resize(size);
-        if (layoutRoot)
-            layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right);
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            BeginPaint(hwnd, &ps);
 
-        break;
+            g_d2dResources.renderTarget->BeginDraw();
+            g_d2dResources.renderTarget->Clear(D2D1::ColorF(D2D1::ColorF::White));
 
-    case WM_PAINT:
-        PAINTSTRUCT ps;
-        BeginPaint(hwnd, &ps);
-        pRenderTarget->BeginDraw();
+            RenderBox(layoutRoot, g_d2dResources);
 
-        pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::White));
-        RenderBox(layoutRoot);
+            HRESULT hr = g_d2dResources.renderTarget->EndDraw();
+            if (hr == D2DERR_RECREATE_TARGET) {
+				//MessageBox(hwnd, L"D2DERR_RECREATE_TARGET", L"Error", MB_OK); // Temp
+                g_d2dResources.Cleanup();
+                g_d2dResources.Initialize(hwnd);
 
-        pRenderTarget->EndDraw();
-        EndPaint(hwnd, &ps);
-        return 0;
+                // Recreate layout
+                RECT rc;
+                GetClientRect(hwnd, &rc);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right);
+            }
 
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
@@ -55,7 +68,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
         800, 600, nullptr, nullptr, hInstance, nullptr
     );
 
-    InitializeD2DResources(hwnd);
+    g_d2dResources.Initialize(hwnd);
 
     const std::string html = "<html><body><h1>Hello World</h1><p>Welcome to Axe Browser!</p></body></html>";
     auto domRoot = ParseTokens(Tokenize(html));
@@ -73,6 +86,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
         DispatchMessage(&msg);
     }
 
-    CleanupD2DResources();
+    g_d2dResources.Cleanup();
+
     return 0;
 }

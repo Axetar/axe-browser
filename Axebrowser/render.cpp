@@ -1,95 +1,109 @@
 #include "render.hpp"
-#include <algorithm>
+#include <string>
 
 #pragma comment(lib, "dwrite")
 #pragma comment(lib, "d2d1")
 
-ID2D1Factory* pD2DFactory = nullptr;
-ID2D1HwndRenderTarget* pRenderTarget = nullptr;
-IDWriteFactory* pDWriteFactory = nullptr;
-IDWriteTextFormat* pTextFormat = nullptr;
+bool D2DResources::Initialize(HWND hwnd) {
+    HRESULT hr = D2D1CreateFactory(
+        D2D1_FACTORY_TYPE_SINGLE_THREADED,
+        factory.GetAddressOf()
+    );
+    if (FAILED(hr)) return false;
 
-void InitializeD2DResources(HWND hwnd) {
-    D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pD2DFactory);
-    DWriteCreateFactory(
+    hr = DWriteCreateFactory(
         DWRITE_FACTORY_TYPE_SHARED,
         __uuidof(IDWriteFactory),
-        reinterpret_cast<IUnknown**>(&pDWriteFactory)
+        reinterpret_cast<IUnknown**>(dwriteFactory.GetAddressOf())
     );
+    if (FAILED(hr)) return false;
 
-    pDWriteFactory->CreateTextFormat(
+    hr = dwriteFactory->CreateTextFormat(
         L"Arial", nullptr,
         DWRITE_FONT_WEIGHT_NORMAL,
         DWRITE_FONT_STYLE_NORMAL,
         DWRITE_FONT_STRETCH_NORMAL,
-        16.0f, L"en-us", &pTextFormat
+        16.0f, L"en-us",
+        textFormat.GetAddressOf()
     );
+    if (FAILED(hr)) return false;
 
-    pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
-    pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+    textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+    textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 
+    return SUCCEEDED(RecreateRenderTarget(hwnd))
+        && SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.8f, 0.9f, 1.0f), &defaultFillBrush)) 
+        && SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.0f, 0.0f, 0.0f), &borderBrush)) 
+        && SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &textBrush));
+}
+
+HRESULT D2DResources::RecreateRenderTarget(HWND hwnd) {
     RECT rc;
     GetClientRect(hwnd, &rc);
-    pD2DFactory->CreateHwndRenderTarget(
-        D2D1::RenderTargetProperties(),
-        D2D1::HwndRenderTargetProperties(hwnd, D2D1::SizeU(rc.right, rc.bottom)),
-        &pRenderTarget
+    
+    D2D1_SIZE_U size = D2D1::SizeU(
+        static_cast<UINT32>(rc.right - rc.left),
+        static_cast<UINT32>(rc.bottom - rc.top)
     );
-}
 
-void CleanupD2DResources() {
-    pRenderTarget->Release();
-    pD2DFactory->Release();
-    pTextFormat->Release();
-    pDWriteFactory->Release();
-}
+    HRESULT hr = factory->CreateHwndRenderTarget(
+        D2D1::RenderTargetProperties(),
+        D2D1::HwndRenderTargetProperties(hwnd, size),
+        &renderTarget
+    );
 
-void RenderBox(const std::shared_ptr<Box>& box, int parentX, int parentY) {
-    if (!box || !box->node || !pRenderTarget)
-        return;
-
-    int x = parentX + box->x;
-    int y = parentY + box->y;
-
-    ID2D1SolidColorBrush* pFillBrush = nullptr, * pBorderBrush = nullptr;
-
-    auto createBrush = [&](const D2D1::ColorF& color, ID2D1SolidColorBrush** brush) -> bool {
-        HRESULT hr = pRenderTarget->CreateSolidColorBrush(color, brush);
-        return SUCCEEDED(hr);
-        };
-
-    if (!createBrush(D2D1::ColorF(0.8f, 0.9f, 1.0f), &pFillBrush))
-        return;
-    if (!createBrush(D2D1::ColorF(0.0f, 0.0f, 0.0f), &pBorderBrush)) {
-        pFillBrush->Release(); // Release previous brush
-        return;
+    // Recreate brushes after recreating render target
+    if (SUCCEEDED(hr)) {
+        renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.8f, 0.9f, 1.0f), &defaultFillBrush);
+        renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.0f, 0.0f, 0.0f), &borderBrush);
+        renderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &textBrush);
     }
 
-    D2D1_RECT_F rect = D2D1::RectF(static_cast<FLOAT>(x), static_cast<FLOAT>(y), static_cast<FLOAT>(x + box->width), static_cast<FLOAT>(y + box->height));
-    pRenderTarget->FillRectangle(rect, pFillBrush);
-    pRenderTarget->DrawRectangle(rect, pBorderBrush);
+    return hr;
+}
 
-    pFillBrush->Release();
-    pBorderBrush->Release();
+void D2DResources::Cleanup() {
+    textBrush.Reset();
+    borderBrush.Reset();
+    defaultFillBrush.Reset();
+    renderTarget.Reset();
+    textFormat.Reset();
+    dwriteFactory.Reset();
+    factory.Reset();
+}
 
-    if (!box->node->text.empty()) { // Text in the node
-        ID2D1SolidColorBrush* pTextBrush = nullptr;
+void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, int parentY) {
+    if (!box || !box->node || !res.renderTarget) return;
 
-        if (!createBrush(D2D1::ColorF(0.0f, 0.0f, 0.0f), &pTextBrush))
-            return;
+    const FLOAT x = static_cast<FLOAT>(parentX + box->x);
+    const FLOAT y = static_cast<FLOAT>(parentY + box->y);
+    const FLOAT width = static_cast<FLOAT>(box->width);
+    const FLOAT height = static_cast<FLOAT>(box->height);
 
-        std::wstring text(box->node->text.begin(), box->node->text.end());
-        D2D1_RECT_F textRect = D2D1::RectF(static_cast<FLOAT>(x + 5), static_cast<FLOAT>(y + 5), static_cast<FLOAT>(x + box->width - 5), static_cast<FLOAT>(y + box->height - 5));
+    // Draw box background and border
+    const D2D1_RECT_F rect = D2D1::RectF(x, y, x + width, y + height);
+    res.renderTarget->FillRectangle(rect, res.defaultFillBrush.Get());
+    res.renderTarget->DrawRectangle(rect, res.borderBrush.Get());
 
-
-        pRenderTarget->DrawText(
-            text.c_str(), static_cast<UINT32>(text.length()),
-            pTextFormat, textRect, pTextBrush
+    // Draw text
+    if (!box->node->text.empty()) {
+        const std::wstring text(box->node->text.begin(), box->node->text.end());
+        const D2D1_RECT_F textRect = D2D1::RectF(
+            x + 5.0f, y + 5.0f,
+            x + width - 5.0f,
+            y + height - 5.0f
         );
 
-        pTextBrush->Release();
+        res.renderTarget->DrawText(
+            text.c_str(),
+            static_cast<UINT32>(text.length()),
+            res.textFormat.Get(),
+            textRect,
+            res.textBrush.Get()
+        );
     }
 
+    // Render children
     for (const auto& child : box->children)
-        RenderBox(child, x, y);
+        RenderBox(child, res, static_cast<int>(x), static_cast<int>(y));
 }
