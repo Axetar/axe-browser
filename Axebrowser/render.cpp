@@ -1,5 +1,6 @@
 #include "render.hpp"
 #include <string>
+#include <iostream>
 
 #pragma comment(lib, "dwrite")
 #pragma comment(lib, "d2d1")
@@ -75,35 +76,35 @@ void D2DResources::Cleanup() {
 void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, int parentY) {
     if (!box || !box->node || !res.renderTarget) return;
 
-    const FLOAT x = static_cast<FLOAT>(parentX + box->x);
-    const FLOAT y = static_cast<FLOAT>(parentY + box->y);
-    const FLOAT width = static_cast<FLOAT>(box->width);
-    const FLOAT height = static_cast<FLOAT>(box->height);
+    // Calculate the absolute position of the box
+    const bool isRootLike = (box->node->tag == "body" || box->node->tag == "html" || box->node->tag == "");
+    const int baseX = isRootLike ? parentX : parentX + box->x;
+    const int baseY = isRootLike ? parentY : parentY + box->y;
+    const FLOAT x = static_cast<FLOAT>(baseX);
+    const FLOAT y = static_cast<FLOAT>(baseY);
 
-    // Draw box background and border
-    const D2D1_RECT_F rect = D2D1::RectF(x, y, x + width, y + height);
-    res.renderTarget->FillRectangle(rect, res.defaultFillBrush.Get());
-    res.renderTarget->DrawRectangle(rect, res.borderBrush.Get());
+    // Render the box if it's not a root-like element
+    if (!isRootLike) {
+        const FLOAT width = static_cast<FLOAT>(box->width);
+        const FLOAT height = static_cast<FLOAT>(box->height);
+        std::cout << box->node->tag << std::endl;
 
-    // Draw text
-    if (!box->node->text.empty()) {
-        const std::wstring text(box->node->text.begin(), box->node->text.end());
-        const D2D1_RECT_F textRect = D2D1::RectF(
-            x + 5.0f, y + 5.0f,
-            x + width - 5.0f,
-            y + height - 5.0f
-        );
+        // Background and border if style'd
+        if (box->node->style.background) {
+            const D2D1_RECT_F rect = D2D1::RectF(x, y, x + width, y + height);
+            res.renderTarget->FillRectangle(rect, res.defaultFillBrush.Get());
+            res.renderTarget->DrawRectangle(rect, res.borderBrush.Get());
+        }
 
-        res.renderTarget->DrawText(
-            text.c_str(),
-            static_cast<UINT32>(text.length()),
-            res.textFormat.Get(),
-            textRect,
-            res.textBrush.Get()
-        );
+        // Draw text if present
+        if (!box->node->text.empty()) {
+            const std::wstring text(box->node->text.begin(), box->node->text.end());
+            const D2D1_RECT_F textRect = D2D1::RectF(x + 5.0f, y + 5.0f, x + width - 5.0f, y + height - 5.0f);
+            res.renderTarget->DrawText(text.c_str(), static_cast<UINT32>(text.length()), res.textFormat.Get(), textRect, res.textBrush.Get());
+        }
     }
 
     // Render children
     for (const auto& child : box->children)
-        RenderBox(child, res, static_cast<int>(x), static_cast<int>(y));
+        RenderBox(child, res, baseX, baseY);
 }

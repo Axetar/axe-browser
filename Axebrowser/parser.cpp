@@ -6,6 +6,7 @@ std::vector<Token> Tokenize(const std::string& html) {
     bool in_tag = false;
 
     for (char c : html) {
+
         if (c == '<') {
             if (!buffer.empty()) {
                 tokens.push_back({ TEXT, buffer });
@@ -38,6 +39,7 @@ std::shared_ptr<Node> ParseTokens(const std::vector<Token>& tokens) {
         if (token.type == TAG_OPEN) {
             auto newNode = std::make_shared<Node>();
             newNode->tag = token.value;
+			newNode->style.background = (token.value == "div");
             nodeStack.back()->children.push_back(newNode);
             nodeStack.push_back(newNode);
         }

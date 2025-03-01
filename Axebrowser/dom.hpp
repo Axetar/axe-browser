@@ -12,7 +12,11 @@ struct Node {
     // Style information
     struct Style {
         float fontSize = 16.0f;
-        D2D1_COLOR_F color = D2D1::ColorF(D2D1::ColorF::Black);
+        int padding = 10;
+
+        D2D1_COLOR_F color = D2D1::ColorF(D2D1::ColorF::White);
+
+        bool background = false;
         D2D1_COLOR_F backgroundColor = D2D1::ColorF(0.8f, 0.9f, 1.0f);
     } style;
 };
