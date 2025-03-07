@@ -87,10 +87,8 @@ void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, 
     if (!isRootLike) {
         const FLOAT width = static_cast<FLOAT>(box->width);
         const FLOAT height = static_cast<FLOAT>(box->height);
-        std::cout << box->node->tag << std::endl;
 
-        // Background and border if style'd
-        if (box->node->style.background) {
+        if (!box->node->style.properties["background"].empty()) {
             const D2D1_RECT_F rect = D2D1::RectF(x, y, x + width, y + height);
             res.renderTarget->FillRectangle(rect, res.defaultFillBrush.Get());
             res.renderTarget->DrawRectangle(rect, res.borderBrush.Get());
@@ -99,7 +97,7 @@ void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, 
         // Draw text if present
         if (!box->node->text.empty()) {
             const std::wstring text(box->node->text.begin(), box->node->text.end());
-            const D2D1_RECT_F textRect = D2D1::RectF(x + 5.0f, y + 5.0f, x + width - 5.0f, y + height - 5.0f);
+            const D2D1_RECT_F textRect = D2D1::RectF(x + 5.0f, y + 4.0f, x + width - 5.0f, y + height - 5.0f);
             res.renderTarget->DrawText(text.c_str(), static_cast<UINT32>(text.length()), res.textFormat.Get(), textRect, res.textBrush.Get());
         }
     }

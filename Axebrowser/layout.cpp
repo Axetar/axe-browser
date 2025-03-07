@@ -2,9 +2,11 @@
 #include <iostream>
 
 std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int width) {
-    auto box = std::make_shared<Box>(Box{ 0, 0, width, 30, node });
+    auto box = std::make_shared<Box>(Box{ 0, 0, width, 0, node });
+    int fontSize = 8;
 
     int yOffset = 10;
+
     for (const auto& child : node->children) {
         auto childBox = CreateLayoutTree(child, width);
         childBox->y = yOffset;
@@ -12,19 +14,18 @@ std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int wid
         box->children.push_back(childBox);
     }
 
-    // Estimate characters per line (assuming average character width is ~0.6 * font size)
-    int charsPerLine = static_cast<int>(width / (node->style.fontSize * 0.6f));
-
-    // Calculate number of lines required
+    // Estimate text dimensions
+    int charsPerLine = static_cast<int>(width / (8 * 0.6f));
     int numLines = static_cast<int>(std::ceil(static_cast<float>(node->text.length()) / charsPerLine));
-
-    // Compute text height based on line count
-    int textHeight = static_cast<int>(numLines * node->style.fontSize * 1.2f);
+    int textHeight = static_cast<int>(numLines * 8 * 1.2f);
 
     if (!node->children.empty())
-        box->height = yOffset - box->y;
+        box->height = yOffset;
     else
-        box->height = textHeight + node->style.padding;
+       box->height = textHeight + std::stoi(node->style.properties["padding"]);
 
     return box;
 }
+
+
+

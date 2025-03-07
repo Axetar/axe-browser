@@ -39,10 +39,10 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 g_d2dResources.Cleanup();
                 g_d2dResources.Initialize(hwnd);
 
-                // Recreate layout
-                //RECT rc;
-               // GetClientRect(hwnd, &rc);
-                //layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right);
+                // Re-create layout 
+                RECT rc;
+                GetClientRect(hwnd, &rc);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right);
             }
 
             EndPaint(hwnd, &ps);
@@ -57,8 +57,9 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
 }
 
 void PrintDOMTree(const std::shared_ptr<Node>& node, int depth = 0) {
-    for (int i = 0; i < depth; ++i) std::cout << "  ";
-    std::cout << "Tag: " << node->tag << std::endl;
+    for (int i = 0; i < depth; ++i) 
+        std::cout << "  ";
+    std::cout << "Tag: " << node->tag << ": " << node->style.properties["padding"] << std::endl;
 
     for (const auto& child : node->children)
         PrintDOMTree(child, depth + 1);
@@ -84,11 +85,13 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	AllocConsole();
 	freopen_s(&stream, "CONOUT$", "w", stdout);
 
-    const std::string html = "<html><body><div><h1>Example Domain</h1><p>Wow This is the most amazing thing ever however the text isn't going to fit if it wraps down and the dimentiosn will be readjusted</p><p>This is the text that isnt going to fit </p></div></body></html>";
-    auto tokens = Tokenize(html);
-    auto domRoot = ParseTokens(tokens);
+    const std::string html = "<html><body><div><h1>Example Domain</h1><p>Wow This is the most amazing thing ever however the text isn't going to fit if it wraps down and the dimentiosn will be readjusted</p><p>This is the text that isnt going to fit </p></div></body> <style> p { background: blue; color: red; } </style></html>";
+    auto csRoot = ParseCSS(html);
+    auto domRoot = ParseHTML(html);
 
-  
+	CombineHTMLCSS(domRoot, csRoot);
+
+
     // In WinMain, after parsing the tokens and creating the DOM tree
     PrintDOMTree(domRoot);
 
