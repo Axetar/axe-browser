@@ -110,8 +110,8 @@ std::shared_ptr<Node> ParseHTML(const std::string& html) {
     const size_t body_end = html.find("</body>");
 
     const std::string body = html.substr(
-        body_start + 7,  // Length of "<style>"
-        body_end - (body_start + 7)
+        body_start,  // Length of "<style>"
+        body_end - (body_start)
     );
 
     // Parse into token

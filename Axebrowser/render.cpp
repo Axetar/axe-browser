@@ -1,6 +1,8 @@
 #include "render.hpp"
 #include <string>
 #include <iostream>
+#include <iomanip>
+#include <cstdio>
 
 #pragma comment(lib, "dwrite")
 #pragma comment(lib, "d2d1")
@@ -41,7 +43,7 @@ bool D2DResources::Initialize(HWND hwnd) {
 HRESULT D2DResources::RecreateRenderTarget(HWND hwnd) {
     RECT rc;
     GetClientRect(hwnd, &rc);
-    
+
     D2D1_SIZE_U size = D2D1::SizeU(
         static_cast<UINT32>(rc.right - rc.left),
         static_cast<UINT32>(rc.bottom - rc.top)
@@ -62,6 +64,21 @@ HRESULT D2DResources::RecreateRenderTarget(HWND hwnd) {
 
     return hr;
 }
+D2D1::ColorF HexToRGB(const std::string& hex) {
+    if (hex.size() != 7 || hex[0] != '#') {
+        std::cerr << "Invalid hex color format!" << std::endl;
+        return D2D1::ColorF(0, 0, 0); // Return black color in case of error
+    }
+
+    int r, g, b;
+    sscanf_s(hex.c_str(), "#%02x%02x%02x", &r, &g, &b);
+
+    float rf = r / 255.0f;
+    float gf = g / 255.0f;
+    float bf = b / 255.0f;
+
+    return D2D1::ColorF(rf, gf, bf);
+}
 
 void D2DResources::Cleanup() {
     textBrush.Reset();
@@ -74,35 +91,56 @@ void D2DResources::Cleanup() {
 }
 
 void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, int parentY) {
-    if (!box || !box->node || !res.renderTarget) return;
+    // Early return for invalid inputs
+    if (!box || !box->node || !res.renderTarget)
+        return;
 
-    // Calculate the absolute position of the box
-    const bool isRootLike = (box->node->tag == "body" || box->node->tag == "html" || box->node->tag == "");
+    // Calculate absolute position
+    const bool isRootLike = (box->node->tag == "html" || box->node->tag == "");
     const int baseX = isRootLike ? parentX : parentX + box->x;
     const int baseY = isRootLike ? parentY : parentY + box->y;
-    const FLOAT x = static_cast<FLOAT>(baseX);
-    const FLOAT y = static_cast<FLOAT>(baseY);
 
-    // Render the box if it's not a root-like element
+    // Only render visible, non-root elements
     if (!isRootLike) {
+        const FLOAT x = static_cast<FLOAT>(baseX);
+        const FLOAT y = static_cast<FLOAT>(baseY);
         const FLOAT width = static_cast<FLOAT>(box->width);
         const FLOAT height = static_cast<FLOAT>(box->height);
+        const D2D1_RECT_F rect = D2D1::RectF(x, y, x + width, y + height);
 
-        if (!box->node->style.properties["background"].empty()) {
-            const D2D1_RECT_F rect = D2D1::RectF(x, y, x + width, y + height);
-            res.renderTarget->FillRectangle(rect, res.defaultFillBrush.Get());
-            res.renderTarget->DrawRectangle(rect, res.borderBrush.Get());
+        // Draw background if specified
+        const auto& bgColor = box->node->style.properties["background"];
+        if (!bgColor.empty()) {
+            // Create brush only when needed
+            ComPtr<ID2D1SolidColorBrush> backgroundBrush;
+            res.renderTarget->CreateSolidColorBrush(HexToRGB(bgColor), &backgroundBrush);
+            res.renderTarget->FillRectangle(rect, backgroundBrush.Get());
         }
 
         // Draw text if present
-        if (!box->node->text.empty()) {
-            const std::wstring text(box->node->text.begin(), box->node->text.end());
-            const D2D1_RECT_F textRect = D2D1::RectF(x + 5.0f, y + 4.0f, x + width - 5.0f, y + height - 5.0f);
-            res.renderTarget->DrawText(text.c_str(), static_cast<UINT32>(text.length()), res.textFormat.Get(), textRect, res.textBrush.Get());
+        const auto& nodeText = box->node->text;
+        if (!nodeText.empty()) {
+            // Convert to wstring only when needed
+            const std::wstring text(nodeText.begin(), nodeText.end());
+
+			const auto t = std::stoi(box->node->style.properties["padding"]);
+            const D2D1_RECT_F textRect = D2D1::RectF(
+                x + t,
+                y + t,
+                x + t,
+                y + t
+            );
+            res.renderTarget->DrawText(
+                text.c_str(),
+                static_cast<UINT32>(text.length()),
+                res.textFormat.Get(),
+                textRect,
+                res.textBrush.Get()
+            );
         }
     }
 
-    // Render children
+    // Process children recursively
     for (const auto& child : box->children)
         RenderBox(child, res, baseX, baseY);
 }

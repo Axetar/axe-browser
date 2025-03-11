@@ -12,9 +12,9 @@ struct Tstyle {
 // std::vector<Tstyle> stylesheet;
 
 
-// Style that goes into html
+// struct so expansion can later be made
 struct finalStyle {
-    std::unordered_map<std::string, std::string> properties; // e.g., {"color", "red", "font-size", "16px"}
+    std::unordered_map<std::string, std::string> properties;
 };
 
 struct Node {
@@ -22,7 +22,7 @@ struct Node {
     std::string text;
     std::vector<std::shared_ptr<Node>> children;
 
-    finalStyle style = { { {"padding", "15"} } };  // Store only resolved style
+    finalStyle style = { {{"padding", "5"}, {"margin", "5"}} };  // Store only resolved style
 };
 
 

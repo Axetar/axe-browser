@@ -20,7 +20,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 RECT rc;
                 GetClientRect(hwnd, &rc);
                 g_d2dResources.RecreateRenderTarget(hwnd);
-                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom - rc.top);
             }
             break;
 
@@ -42,7 +42,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 // Re-create layout 
                 RECT rc;
                 GetClientRect(hwnd, &rc);
-                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom - rc.top);
             }
 
             EndPaint(hwnd, &ps);
@@ -85,7 +85,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	AllocConsole();
 	freopen_s(&stream, "CONOUT$", "w", stdout);
 
-    const std::string html = "<html><body><div><h1>Example Domain</h1><p>Wow This is the most amazing thing ever however the text isn't going to fit if it wraps down and the dimentiosn will be readjusted</p><p>This is the text that isnt going to fit </p></div></body> <style> p { background: blue; color: red; } </style></html>";
+    const std::string html = "<html><body><div><h1>Example Domain</h1><p>This domain is for use in illustrative examples in documents.You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> body { background: #f0f0f2; margin: 0; padding: 0; } </style></html>";
     auto csRoot = ParseCSS(html);
     auto domRoot = ParseHTML(html);
 
@@ -97,7 +97,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
     RECT rc;
     GetClientRect(hwnd, &rc);
-    layoutRoot = CreateLayoutTree(domRoot, rc.right);
+    layoutRoot = CreateLayoutTree(domRoot, rc.right, rc.bottom - rc.top);
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
