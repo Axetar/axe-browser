@@ -22,7 +22,7 @@ struct Node {
     std::string text;
     std::vector<std::shared_ptr<Node>> children;
 
-    finalStyle style = { {{"padding", "5"}, {"margin", "5"}} };  // Store only resolved style
+    finalStyle style = { {{"padding", "0"}, {"margin", "0"}} };  // Store only resolved style
 };
 
 

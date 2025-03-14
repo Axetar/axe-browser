@@ -123,12 +123,12 @@ void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, 
             // Convert to wstring only when needed
             const std::wstring text(nodeText.begin(), nodeText.end());
 
-			const auto t = std::stoi(box->node->style.properties["padding"]);
+			const auto t = stoi(box->node->style.properties["padding"]);
             const D2D1_RECT_F textRect = D2D1::RectF(
                 x + t,
                 y + t,
-                x + t,
-                y + t
+                x + width - t,
+                y + height - t
             );
             res.renderTarget->DrawText(
                 text.c_str(),

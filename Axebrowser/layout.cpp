@@ -2,7 +2,8 @@
 #include <iostream>
 
 std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int width, const int height, bool isDirectChildOfBody) {
-    auto box = std::make_shared<Box>(Box{ 0, 0, width, 0, node });
+	int margin = stoi(node->style.properties["margin"]);
+    auto box = std::make_shared<Box>(Box{margin, margin, width - margin * 2, 0, node });
 
     // Special handling for body and its children
     bool isBody = (node->tag == "body");
@@ -12,24 +13,22 @@ std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int wid
 
     for (const auto& child : node->children) {
         // information about parent to children
-        auto childBox = CreateLayoutTree(child, width, height, isBody);
+        auto childBox = CreateLayoutTree(child, width - margin * 2, height, isBody);
         childBox->y = yOffset;
         yOffset += childBox->height;
         box->children.push_back(childBox);
     }
 
     // Estimate text dimensions
-    int charsPerLine = static_cast<int>(width / (16.0f * 0.6f));
-    int numLines = static_cast<int>(std::ceil(static_cast<float>(node->text.length()) / charsPerLine));
-    int textHeight = static_cast<int>(numLines * 16.0f * 1.2f);
+    int fontSize = 16.0f; //stoi(node->style.properties["font-size"]);
+    int charsPerLine = static_cast<int>((width) / (fontSize * 0.6f)); // - stoi(node->style.properties["padding"]) * 2
+    int numLines = static_cast<int>(ceil(static_cast<float>(node->text.length()) / charsPerLine));
+    int textHeight = static_cast<int>(numLines * fontSize * 1.2f);
 
-    // Calculate height based on content and element type
-    if (!node->children.empty()) // For body, don't add extra height beyond content height
-        box->height = yOffset;
-    else
-        box->height = textHeight + std::stoi(box->node->style.properties["margin"]);
+     // if there are children, height is sum of children's heights
+     box->height = margin + (!node->children.empty() ? yOffset : textHeight);
 
-    // Special case: if this is the body element, make it fill the viewport height
+	// Body element should take full height
     if (isBody)
         box->height = height;
 

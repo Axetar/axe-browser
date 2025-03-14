@@ -110,7 +110,7 @@ std::shared_ptr<Node> ParseHTML(const std::string& html) {
     const size_t body_end = html.find("</body>");
 
     const std::string body = html.substr(
-        body_start,  // Length of "<style>"
+        body_start, 
         body_end - (body_start)
     );
 
@@ -142,7 +142,6 @@ std::shared_ptr<Node> ParseHTML(const std::string& html) {
         if (token.type == TAG_OPEN) {
             auto newNode = std::make_shared<Node>();
             newNode->tag = token.value;
-			//newNode->style["background"] = (token.value == "h1");
             nodeStack.back()->children.push_back(newNode);
             nodeStack.push_back(newNode);
         }
@@ -151,8 +150,8 @@ std::shared_ptr<Node> ParseHTML(const std::string& html) {
         else if (token.type == TEXT)
             nodeStack.back()->text = token.value;
     }
-    
-    return root;
+
+    return root->children[0]; // return body tag as first instead of blank space
 }
 
 void CombineHTMLCSS(std::shared_ptr<Node>& node, const std::vector<Tstyle>& css) {
