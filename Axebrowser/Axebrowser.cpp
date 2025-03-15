@@ -38,7 +38,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
 
             HRESULT hr = g_d2dResources.renderTarget->EndDraw();
             if (hr == D2DERR_RECREATE_TARGET) { 
-				MessageBox(hwnd, L"D2DERR_RECREATE_TARGET", L"Error", MB_OK); // Temp
+				MessageBox(hwnd, L"D2DERR_RECREATE_TARGET", L"Error", MB_OK); 
                 g_d2dResources.Cleanup();
                 g_d2dResources.Initialize(hwnd);
 
@@ -89,7 +89,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	AllocConsole();
 	freopen_s(&stream, "CONOUT$", "w", stdout);
 
-    const std::string html = "<html><body><div><h1>Example Domain</h1><p>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 25; padding: 10; } p { background: #FFFFFF; } </style></html>";
+    const std::string html = "<html><body><div><h1>Example Domain</h1><p>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 25; padding: 10; } p { background: #FFFFFF; margin: 15; } </style></html>";
     auto csRoot = ParseCSS(html);
     auto domRoot = ParseHTML(html);
 

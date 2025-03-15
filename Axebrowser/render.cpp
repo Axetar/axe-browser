@@ -125,10 +125,10 @@ void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, 
 
 			const auto t = stoi(box->node->style.properties["padding"]);
             const D2D1_RECT_F textRect = D2D1::RectF(
-                x + t,
-                y + t,
-                x + width - t,
-                y + height - t
+                x,
+                y,
+                x + width,
+                y + height
             );
             res.renderTarget->DrawText(
                 text.c_str(),
