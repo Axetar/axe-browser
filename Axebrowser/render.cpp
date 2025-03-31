@@ -102,6 +102,8 @@ void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, 
 
     // Only render visible, non-root elements
     if (!isRootLike) {
+
+        // Make float as rectF only takes floats
         const FLOAT x = static_cast<FLOAT>(baseX);
         const FLOAT y = static_cast<FLOAT>(baseY);
         const FLOAT width = static_cast<FLOAT>(box->width);
@@ -125,10 +127,10 @@ void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, 
 
 			const auto t = stoi(box->node->style.properties["padding"]);
             const D2D1_RECT_F textRect = D2D1::RectF(
-                x,
-                y,
-                x + width,
-                y + height
+                x + t,
+                y + t,
+                x + width - t * 2,
+                y + height - t * 2
             );
             res.renderTarget->DrawText(
                 text.c_str(),
