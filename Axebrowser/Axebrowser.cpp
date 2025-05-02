@@ -22,7 +22,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 RECT rc;
                 GetClientRect(hwnd, &rc);
                 g_d2dResources.RecreateRenderTarget(hwnd);
-                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom - rc.top);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom);
 
                 InvalidateRect(hwnd, nullptr, TRUE); // Force a full repaint
             }
@@ -47,12 +47,13 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 // Re-create layout 
                 RECT rc;
                 GetClientRect(hwnd, &rc);
-                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom - rc.top);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom);
             }
 
             EndPaint(hwnd, &ps);
             return 0;
         }
+
         case WM_MOUSEMOVE: {
 			POINT pt;
 			GetCursorPos(&pt);
@@ -89,7 +90,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                     hoveredBox->outer_x + hoveredBox->outer_width + hoveredBox->margin.right,
                     hoveredBox->outer_y + hoveredBox->outer_height + hoveredBox->margin.bottom
                 );
-
+                std::cout << hoveredBox->outer_x + hoveredBox->outer_width + hoveredBox->margin.right << std::endl;
                 D2D1_RECT_F marginInner = D2D1::RectF(
                     hoveredBox->outer_x,
                     hoveredBox->outer_y,
@@ -179,7 +180,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	AllocConsole();
 	freopen_s(&stream, "CONOUT$", "w", stdout);
 
-    const std::string html = "<html><body><div><h1>Example Domain</h1><p1>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 25; padding: 10; } p1 { background: #FFFFFF; margin: 0; padding: 25; } </style></html>";
+    const std::string html = "<html><body><div><h1>Example Domain</h1><p1>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 10; padding: 20; } p1 { background: #FFFFFF; margin: 0; padding: 25; } </style></html>";
     auto csRoot = ParseCSS(html);
     auto domRoot = ParseHTML(html);
 
@@ -190,7 +191,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
     RECT rc;
     GetClientRect(hwnd, &rc);
-    layoutRoot = CreateLayoutTree(domRoot, rc.right, rc.bottom - rc.top);
+    layoutRoot = CreateLayoutTree(domRoot, rc.right, rc.bottom);
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);

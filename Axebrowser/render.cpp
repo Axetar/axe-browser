@@ -128,7 +128,7 @@ void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, 
     if (!bgColor.empty()) {
         ComPtr<ID2D1SolidColorBrush> backgroundBrush;
         res.renderTarget->CreateSolidColorBrush(HexToRGB(bgColor), &backgroundBrush);
-        res.renderTarget->FillRectangle(content_rect, backgroundBrush.Get());
+        //res.renderTarget->FillRectangle(content_rect, backgroundBrush.Get());
     }
 
     // Draw text
