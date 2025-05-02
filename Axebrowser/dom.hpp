@@ -27,8 +27,19 @@ struct Node {
 
 
 struct Box {
-    int x, y = 0;
-    int width, height = 0;
+    // Full box dimensions (including margins)
+    int outer_x, outer_y;
+    int outer_width, outer_height;
+
+    // Individual box model components
+    struct {
+        int top, right, bottom, left;
+    } margin, padding;
+
+    // Content area (inside padding)
+    int content_x, content_y;
+    int content_width, content_height;
+
     std::shared_ptr<Node> node;
     std::vector<std::shared_ptr<Box>> children;
 };

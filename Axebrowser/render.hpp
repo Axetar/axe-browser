@@ -16,6 +16,8 @@ struct D2DResources {
     ComPtr<ID2D1SolidColorBrush> defaultFillBrush;
     ComPtr<ID2D1SolidColorBrush> borderBrush;
     ComPtr<ID2D1SolidColorBrush> textBrush;
+    ComPtr<ID2D1SolidColorBrush> marginBrush;
+    ComPtr<ID2D1SolidColorBrush> paddingBrush;
 
     bool Initialize(HWND hwnd);
     void Cleanup();

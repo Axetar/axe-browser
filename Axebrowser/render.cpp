@@ -37,7 +37,9 @@ bool D2DResources::Initialize(HWND hwnd) {
     return SUCCEEDED(RecreateRenderTarget(hwnd))
         && SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.8f, 0.9f, 1.0f), &defaultFillBrush)) 
         && SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.0f, 0.0f, 0.0f), &borderBrush)) 
-        && SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &textBrush));
+        && SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &textBrush))
+	    && SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.0f, 0.0f, 1.0f, 0.2f), &marginBrush))
+		&& SUCCEEDED(renderTarget->CreateSolidColorBrush(D2D1::ColorF(1.0f, 0.5f, 0.0f, 0.2f), &paddingBrush));
 }
 
 HRESULT D2DResources::RecreateRenderTarget(HWND hwnd) {
@@ -57,9 +59,27 @@ HRESULT D2DResources::RecreateRenderTarget(HWND hwnd) {
 
     // Recreate brushes after recreating render target
     if (SUCCEEDED(hr)) {
+        // Create margin brush (blue with 20% opacity)
+        renderTarget->CreateSolidColorBrush(
+            D2D1::ColorF(0.0f, 0.0f, 1.0f, 0.2f),
+            &marginBrush
+        );
+
+        // Create padding brush (orange with 20% opacity)
+        renderTarget->CreateSolidColorBrush(
+            D2D1::ColorF(1.0f, 0.5f, 0.0f, 0.2f),
+            &paddingBrush
+        );
         renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.8f, 0.9f, 1.0f), &defaultFillBrush);
         renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.0f, 0.0f, 0.0f), &borderBrush);
         renderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &textBrush);
+		renderTarget->CreateSolidColorBrush(D2D1::ColorF(0.0f, 0.0f, 1.0f, 0.2f), &marginBrush);
+		renderTarget->CreateSolidColorBrush(D2D1::ColorF(1.0f, 0.5f, 0.0f, 0.2f), &paddingBrush);
+	}
+	else {
+		// Cleanup if failed
+		Cleanup();
+		MessageBox(hwnd, L"Failed to create render target", L"Error", MB_OK);
     }
 
     return hr;
@@ -84,6 +104,8 @@ void D2DResources::Cleanup() {
     textBrush.Reset();
     borderBrush.Reset();
     defaultFillBrush.Reset();
+	marginBrush.Reset();
+	paddingBrush.Reset();
     renderTarget.Reset();
     textFormat.Reset();
     dwriteFactory.Reset();
@@ -91,58 +113,37 @@ void D2DResources::Cleanup() {
 }
 
 void RenderBox(const std::shared_ptr<Box>& box, D2DResources& res, int parentX, int parentY) {
-    // Early return for invalid inputs
-    if (!box || !box->node || !res.renderTarget)
-        return;
+    if (!box || !res.renderTarget) return;
 
-    // Calculate absolute position
-    const bool isRootLike = (box->node->tag == "html" || box->node->tag == "");
-    const int baseX = isRootLike ? parentX : parentX + box->x;
-    const int baseY = isRootLike ? parentY : parentY + box->y;
+    // Draw content background
+    D2D1_RECT_F content_rect = D2D1::RectF(
+        box->content_x,
+        box->content_y,
+        box->content_x + box->content_width,
+        box->content_y + box->content_height
+    );
 
-    // Only render visible, non-root elements
-    if (!isRootLike) {
-
-        // Make float as rectF only takes floats
-        const FLOAT x = static_cast<FLOAT>(baseX);
-        const FLOAT y = static_cast<FLOAT>(baseY);
-        const FLOAT width = static_cast<FLOAT>(box->width);
-        const FLOAT height = static_cast<FLOAT>(box->height);
-        const D2D1_RECT_F rect = D2D1::RectF(x, y, x + width, y + height);
-
-        // Draw background if specified
-        const auto& bgColor = box->node->style.properties["background"];
-        if (!bgColor.empty()) {
-            // Create brush only when needed
-            ComPtr<ID2D1SolidColorBrush> backgroundBrush;
-            res.renderTarget->CreateSolidColorBrush(HexToRGB(bgColor), &backgroundBrush);
-            res.renderTarget->FillRectangle(rect, backgroundBrush.Get());
-        }
-
-        // Draw text if present
-        const auto& nodeText = box->node->text;
-        if (!nodeText.empty()) {
-            // Convert to wstring only when needed
-            const std::wstring text(nodeText.begin(), nodeText.end());
-
-			const auto t = stoi(box->node->style.properties["padding"]);
-            const D2D1_RECT_F textRect = D2D1::RectF(
-                x + t,
-                y + t,
-                x + width - t * 2,
-                y + height - t * 2
-            );
-            res.renderTarget->DrawText(
-                text.c_str(),
-                static_cast<UINT32>(text.length()),
-                res.textFormat.Get(),
-                textRect,
-                res.textBrush.Get()
-            );
-        }
+    // Draw content background
+    const auto& bgColor = box->node->style.properties["background"];
+    if (!bgColor.empty()) {
+        ComPtr<ID2D1SolidColorBrush> backgroundBrush;
+        res.renderTarget->CreateSolidColorBrush(HexToRGB(bgColor), &backgroundBrush);
+        res.renderTarget->FillRectangle(content_rect, backgroundBrush.Get());
     }
 
-    // Process children recursively
+    // Draw text
+    if (!box->node->text.empty()) {
+        std::wstring text(box->node->text.begin(), box->node->text.end());
+        res.renderTarget->DrawText(
+            text.c_str(),
+            static_cast<UINT32>(text.length()),
+            res.textFormat.Get(),
+            content_rect,
+            res.textBrush.Get()
+        );
+    }
+
+    // Render children using content area as new parent coordinates
     for (const auto& child : box->children)
-        RenderBox(child, res, baseX, baseY);
+        RenderBox(child, res, box->content_x, box->content_y);
 }
