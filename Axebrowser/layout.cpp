@@ -1,12 +1,6 @@
 #include "layout.hpp"
 #include <iostream>
 
-#include "layout.hpp"
-#include <iostream>
-
-#include "layout.hpp"
-#include <iostream>
-
 std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int available_width, int available_height, int parent_x, int parent_y) {
     auto box = std::make_shared<Box>();
     box->node = node;
@@ -20,8 +14,8 @@ std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int ava
     box->padding = { padding, padding, padding, padding };
 
     // Calculate outer dimensions (including margins)
-    box->outer_width = available_width;
-    box->outer_height = available_height;
+    box->outer_width = available_width - margin * 2;
+    box->outer_height = available_height - margin * 2;
 
     // Calculate content area (inside padding)
     box->content_width = box->outer_width - (margin * 2 + padding * 2);
@@ -38,8 +32,8 @@ std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int ava
     for (const auto& child : node->children) {
         auto child_box = CreateLayoutTree(
             child,
-            box->content_width - padding * 2,
-            box->content_height - padding * 2,
+            box->content_width,
+            box->content_height,
             box->content_x,
             box->content_y + y_offset
         );
@@ -66,7 +60,7 @@ std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int ava
     // Handle body element special case
     if (node->tag == "body") {
         box->outer_height = available_height;
-        box->content_height = available_height - margin * 2 - padding * 2;
+        box->content_height = available_height;
     }
 
     return box;

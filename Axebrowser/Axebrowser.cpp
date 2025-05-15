@@ -23,7 +23,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 RECT rc;
                 GetClientRect(hwnd, &rc);
                 g_d2dResources.RecreateRenderTarget(hwnd);
-                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom - rc.top);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom);
 
                 InvalidateRect(hwnd, nullptr, TRUE); // Force a full repaint
             }
@@ -48,12 +48,13 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 // Re-create layout 
                 RECT rc;
                 GetClientRect(hwnd, &rc);
-                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom - rc.top);
+                layoutRoot = CreateLayoutTree(layoutRoot->node, rc.right, rc.bottom);
             }
 
             EndPaint(hwnd, &ps);
             return 0;
         }
+
         case WM_MOUSEMOVE: {
 			POINT pt;
 			GetCursorPos(&pt);
@@ -90,7 +91,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                     hoveredBox->outer_x + hoveredBox->outer_width + hoveredBox->margin.right,
                     hoveredBox->outer_y + hoveredBox->outer_height + hoveredBox->margin.bottom
                 );
-
+                std::cout << hoveredBox->outer_x + hoveredBox->outer_width + hoveredBox->margin.right << std::endl;
                 D2D1_RECT_F marginInner = D2D1::RectF(
                     hoveredBox->outer_x,
                     hoveredBox->outer_y,
@@ -215,7 +216,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
     RECT rc;
     GetClientRect(hwnd, &rc);
-    layoutRoot = CreateLayoutTree(domRoot, rc.right, rc.bottom - rc.top);
+    layoutRoot = CreateLayoutTree(domRoot, rc.right, rc.bottom);
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
