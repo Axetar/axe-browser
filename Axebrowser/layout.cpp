@@ -5,29 +5,29 @@ std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int ava
     auto box = std::make_shared<Box>();
     box->node = node;
 
-    // Parse style values
+    // style values
     int margin = stoi(node->style.properties["margin"]);
     int padding = stoi(node->style.properties["padding"]);
 
-    // Set box model values (all sides equal)
+    // box model values (all sides equal)
     box->margin = { margin, margin, margin, margin };
     box->padding = { padding, padding, padding, padding };
 
-    // Calculate outer dimensions (including margins)
-    box->outer_width = available_width - margin * 2;
-    box->outer_height = available_height - margin * 2;
+    // outer dimensions (including margins)
+    box->outer_width = available_width - box->margin.left - box->margin.right;
+    box->outer_height = available_height - box->margin.top - box->margin.bottom;
 
-    // Calculate content area (inside padding)
-    box->content_width = box->outer_width - (margin * 2 + padding * 2);
-    box->content_height = box->outer_height - (margin * 2 + padding * 2);
+    // content area (inside padding)
+    box->content_width = box->outer_width - box->padding.left - box->padding.right;
+    box->content_height = box->outer_height - box->padding.top - box->padding.bottom;
 
     // Set positions relative to parent
-    box->outer_x = parent_x + margin;
-    box->outer_y = parent_y + margin;
-    box->content_x = box->outer_x + padding;
-    box->content_y = box->outer_y + padding;
+    box->outer_x = parent_x + box->margin.left;
+    box->outer_y = parent_y + box->margin.top;
+    box->content_x = box->outer_x + box->padding.left;
+    box->content_y = box->outer_y + box->padding.top;
 
-    // Layout children in content area
+    // children in content area
     int y_offset = 0;
     for (const auto& child : node->children) {
         auto child_box = CreateLayoutTree(
@@ -46,16 +46,16 @@ std::shared_ptr<Box> CreateLayoutTree(const std::shared_ptr<Node>& node, int ava
     if (node->children.empty()) {
         int fontSize = 16;
         int charsPerLine = box->content_width / (fontSize * 0.6f);
-        int numLines = static_cast<int>(ceil(node->text.length() / static_cast<float>(charsPerLine)));
+        int numLines = static_cast<int>(ceil(node->text.length())) / charsPerLine;
         box->content_height = numLines * fontSize * 1.1f;
     }
     else {
         box->content_height = y_offset;
     }
 
-    // Update outer dimensions to match content + padding + margin
-    box->outer_height = margin * 2 + padding * 2 + box->content_height;
-    box->outer_width = margin * 2 + padding * 2 + box->content_width;
+    // Update outer dimensions to match content + padding
+    box->outer_height = box->padding.top + box->padding.bottom + box->content_height;
+    box->outer_width = box->padding.left + box->padding.right + box->content_width;
 
     // Handle body element special case
     if (node->tag == "body") {

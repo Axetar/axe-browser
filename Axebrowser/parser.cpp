@@ -73,6 +73,7 @@ std::vector<Tstyle> ParseCSS(const std::string& css) {
 
             case ParseState::PropertyValue:
                 if (c == ';') {
+
                     current_rule.properties[property_name] = text;
                     text.clear();
 					property_name.clear();
