@@ -6,7 +6,7 @@
 #include <dwrite.h>
 #include <wrl/client.h>
 #include <curl/curl.h>
-#include "dom.hpp" 
+#include "dom.hpp"
 #include "parser.hpp"
 #include "layout.hpp"
 #include "render.hpp"
@@ -161,6 +161,13 @@ void PrintDOMTree(const std::shared_ptr<Node>& node, int depth = 0) {
         PrintDOMTree(child, depth + 1);
 }
 
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    size_t totalSize = size * nmemb;
+    std::string* html = static_cast<std::string*>(userp);
+    html->append(static_cast<char*>(contents), totalSize);
+    return totalSize;
+}
+
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow) {
     WNDCLASS wc = {};
@@ -177,11 +184,12 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
     g_d2dResources.Initialize(hwnd);
 
+	// Allows for console output
     FILE* stream;
 	AllocConsole();
 	freopen_s(&stream, "CONOUT$", "w", stdout);
 
-    const std::string html = "<html><body><div><h1>Example Domain</h1><p1>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 50; padding: 20; } p1 { background: #FFFFFF; margin: 0; padding: 25; } </style></html>";
+    const std::string html = "<html><body><div><h1>Example Domain</h1><p1>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 10; padding: 20; } p1 { background: #FFFFFF; margin: 0; padding: 25; } </style></html>";
     auto csRoot = ParseCSS(html);
     auto domRoot = ParseHTML(html);
 

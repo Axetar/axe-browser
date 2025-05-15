@@ -12,14 +12,16 @@ bool D2DResources::Initialize(HWND hwnd) {
         D2D1_FACTORY_TYPE_SINGLE_THREADED,
         factory.GetAddressOf()
     );
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) 
+        return false;
 
     hr = DWriteCreateFactory(
         DWRITE_FACTORY_TYPE_SHARED,
         __uuidof(IDWriteFactory),
         reinterpret_cast<IUnknown**>(dwriteFactory.GetAddressOf())
     );
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) 
+        return false;
 
     hr = dwriteFactory->CreateTextFormat(
         L"Arial", nullptr,
@@ -29,7 +31,8 @@ bool D2DResources::Initialize(HWND hwnd) {
         16.0f, L"en-us",
         textFormat.GetAddressOf()
     );
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) 
+        return false;
 
     textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
     textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
