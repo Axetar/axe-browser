@@ -15,15 +15,25 @@ std::vector<Tstyle> ParseCSS(const std::string& css) {
     std::vector<Tstyle> css_rules;
 
     // Extract CSS content between <style> tags
-    const size_t style_start = css.find("<style>");
-    const size_t style_end = css.find("</style>");
 
-    if (style_start == std::string::npos || style_end == std::string::npos)
+    // find the start of a <style ...> tag
+    auto style_open = css.find("<style");
+    if (style_open == std::string::npos) 
+        return css_rules;
+
+    // find the end of that opening tag: the next '>'
+    auto tag_end = css.find('>', style_open);
+    if (tag_end == std::string::npos) 
+        return css_rules;
+
+    // now find the closing </style>
+    auto style_close = css.find("</style>", tag_end);
+    if (style_close == std::string::npos) 
         return css_rules;
 
     const std::string style_content = css.substr(
-        style_start + 7,  // Length of "<style>"
-        style_end - (style_start + 7)
+        tag_end + 1,  // Length of "<style>"
+        style_close - (tag_end + 1)
     );
 
     // CSS parsing states
@@ -59,8 +69,10 @@ std::vector<Tstyle> ParseCSS(const std::string& css) {
                 break;
 
             case ParseState::PropertyName:
-                if (c == ':')
+                if (c == ':') {
                     state = ParseState::PropertyValue;
+					std::cout << property_name << "\n";
+                } 
                 else if (c == '}') {
                     css_rules.push_back(current_rule);
                     current_rule = Tstyle();
