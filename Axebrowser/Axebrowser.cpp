@@ -155,7 +155,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
 void PrintDOMTree(const std::shared_ptr<Node>& node, int depth = 0) {
     for (int i = 0; i < depth; ++i) 
         std::cout << "  ";
-    std::cout << "Tag: " << node->tag << ": " << node->style.properties["padding"] << std::endl;
+    std::cout << "Tag: " << node->tag << ": " << node->style.properties["margin"] << std::endl;
 
     for (const auto& child : node->children)
         PrintDOMTree(child, depth + 1);
@@ -186,11 +186,29 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 	// Allows for console output
     FILE* stream;
-	AllocConsole();
+	AllocConsole(); 
 	freopen_s(&stream, "CONOUT$", "w", stdout);
 
-    const std::string html = "<html><body><div><h1>Example Domain</h1><p1>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 10; padding: 20; } p1 { background: #FFFFFF; margin: 0; padding: 25; } </style></html>";
-    auto csRoot = ParseCSS(html);
+
+    CURL* curl = curl_easy_init();
+    std::string html;
+
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &html);
+
+        CURLcode res = curl_easy_perform(curl);
+        if (res != CURLE_OK)
+            std::cout << "curl_easy_perform() failed: " << curl_easy_strerror(res) << '\n';
+
+        curl_easy_cleanup(curl);
+    }
+
+	const std::string css = "<style> div { background: #FFC0CB; margin: auto; width: 300; padding: 20; } p { background: #FFFFFF; margin: 20; padding: 25; } </style>";
+    //const std::string html = "<html><body><div><h1>Example Domain</h1><p1>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 10; padding: 20; } p1 { background: #FFFFFF; margin: 0; padding: 25; } </style></html>";
+    auto csRoot = ParseCSS(css);
+
     auto domRoot = ParseHTML(html);
 
 	CombineHTMLCSS(domRoot, csRoot);

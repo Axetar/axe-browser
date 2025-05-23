@@ -33,7 +33,7 @@ struct Box {
 
     // Individual box model components
     struct {
-        int top, right, bottom, left;
+        int left, right, top, bottom;
     } margin, padding;
 
     // Content area (inside padding)

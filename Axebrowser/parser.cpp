@@ -71,7 +71,6 @@ std::vector<Tstyle> ParseCSS(const std::string& css) {
             case ParseState::PropertyName:
                 if (c == ':') {
                     state = ParseState::PropertyValue;
-					std::cout << property_name << "\n";
                 } 
                 else if (c == '}') {
                     css_rules.push_back(current_rule);
@@ -100,14 +99,12 @@ std::vector<Tstyle> ParseCSS(const std::string& css) {
         previous_char = c; // Use for comment handling
     }
 
-    // Debug output
-    for (const auto& rule : css_rules) {
-        std::cout << "Selector: " << rule.selector << "\n";
-        for (const auto& property : rule.properties) {
-            std::cout << "  " << property.first << ": " << property.second << "\n";
+    for (auto c : css_rules) {
+        std::cout << "Selector: " << c.selector << std::endl;
+        for (auto p : c.properties) {
+            std::cout << "Property: " << p.first << ", Value: " << p.second << std::endl;
         }
     }
-
     return css_rules;
 }
 
