@@ -14,7 +14,57 @@
 std::shared_ptr<Box> layoutRoot;
 D2DResources g_d2dResources;
 std::shared_ptr<Box> phoveredBox = nullptr;
+HWND hwnd;
 
+void PrintDOMTree(const std::shared_ptr<Node>& node, int depth = 0) {
+    for (int i = 0; i < depth; ++i)
+        std::cout << "  ";
+    std::cout << "Tag: " << node->tag << ": " << node->style.properties["margin"] << std::endl;
+
+    for (const auto& child : node->children)
+        PrintDOMTree(child, depth + 1);
+}
+
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    size_t totalSize = size * nmemb;
+    std::string* html = static_cast<std::string*>(userp);
+    html->append(static_cast<char*>(contents), totalSize);
+    return totalSize;
+}
+
+void openWebsite(const std::string url) {
+    CURL* curl = curl_easy_init();
+    std::string html;
+
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); // Follow redirects default - 50;
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &html);
+
+        CURLcode res = curl_easy_perform(curl);
+        if (res != CURLE_OK)
+            std::cout << "curl_easy_perform() failed: " << curl_easy_strerror(res) << '\n';
+
+        curl_easy_cleanup(curl);
+    }
+
+    std::cout << html << std::endl;
+    const std::string css = "<style> a { margin: 5; } div { background: #FFC0CB; margin: auto; width: 300; padding: 20; } p { background: #FFFFFF; margin: 20; padding: 25; } </style>";
+    //const std::string html = "<html><body><div><h1>Example Domain</h1><p1>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 10; padding: 20; } p1 { background: #FFFFFF; margin: 0; padding: 25; } </style></html>";
+    auto csRoot = ParseCSS(css);
+
+    auto domRoot = ParseHTML(html);
+
+    CombineHTMLCSS(domRoot, csRoot);
+
+    // In WinMain, after parsing the tokens and creating the DOM tree
+    PrintDOMTree(domRoot);
+
+    RECT rc;
+    GetClientRect(hwnd, &rc);
+    layoutRoot = CreateLayoutTree(domRoot, rc.right, rc.bottom);
+}
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
@@ -82,6 +132,11 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 // (+) Need to switch to just a region repaint
 				InvalidateRect(hwnd, nullptr, TRUE); // Force a full repaint
 				UpdateWindow(hwnd);
+
+				if (hoveredBox->node->tag == "a") { // Foward to link on hover
+					openWebsite("https://www.google.com/"); // TODO: Get link from node 
+                    return 0;
+				}
                 g_d2dResources.renderTarget->BeginDraw();
 
                 // Full margin rect minues border/padding/content area
@@ -152,21 +207,6 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-void PrintDOMTree(const std::shared_ptr<Node>& node, int depth = 0) {
-    for (int i = 0; i < depth; ++i) 
-        std::cout << "  ";
-    std::cout << "Tag: " << node->tag << ": " << node->style.properties["margin"] << std::endl;
-
-    for (const auto& child : node->children)
-        PrintDOMTree(child, depth + 1);
-}
-
-static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
-    size_t totalSize = size * nmemb;
-    std::string* html = static_cast<std::string*>(userp);
-    html->append(static_cast<char*>(contents), totalSize);
-    return totalSize;
-}
 
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow) {
@@ -176,7 +216,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     wc.lpszClassName = L"AxeBrowserClass";
     RegisterClass(&wc);
 
-    HWND hwnd = CreateWindow(
+    hwnd = CreateWindow(
         wc.lpszClassName, L"Axe Browser",
         WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
         800, 600, nullptr, nullptr, hInstance, nullptr
@@ -189,39 +229,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	AllocConsole(); 
 	freopen_s(&stream, "CONOUT$", "w", stdout);
 
-
-    CURL* curl = curl_easy_init();
-    std::string html;
-
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &html);
-
-        CURLcode res = curl_easy_perform(curl);
-        if (res != CURLE_OK)
-            std::cout << "curl_easy_perform() failed: " << curl_easy_strerror(res) << '\n';
-
-        curl_easy_cleanup(curl);
-    }
-
-	const std::string css = "<style> div { background: #FFC0CB; margin: auto; width: 300; padding: 20; } p { background: #FFFFFF; margin: 20; padding: 25; } </style>";
-    //const std::string html = "<html><body><div><h1>Example Domain</h1><p1>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p><p><a href = 'https://www.iana.org/domains/example'>More information...</a></p></div> </body> <style> div { background: #FFC0CB; margin: 10; padding: 20; } p1 { background: #FFFFFF; margin: 0; padding: 25; } </style></html>";
-    auto csRoot = ParseCSS(css);
-
-    auto domRoot = ParseHTML(html);
-
-	CombineHTMLCSS(domRoot, csRoot);
-
-    // In WinMain, after parsing the tokens and creating the DOM tree
-    PrintDOMTree(domRoot);
-
-    RECT rc;
-    GetClientRect(hwnd, &rc);
-    layoutRoot = CreateLayoutTree(domRoot, rc.right, rc.bottom);
+	openWebsite("https://www.example.com/");
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
+
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
         TranslateMessage(&msg);

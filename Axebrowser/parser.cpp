@@ -1,6 +1,7 @@
 #include "parser.hpp"
 #include <iostream>
 #include <functional>
+#include <utility>
 
 // ADD: Whitespace trim for complex CSS
 std::string TrimWhitespace(const std::string& str) {
@@ -10,6 +11,46 @@ std::string TrimWhitespace(const std::string& str) {
 
     return str.substr(first, (str.find_last_not_of(" \t") - first + 1));
 }
+std::pair<std::string, std::map<std::string, std::string>> ParseTag(const std::string& tag_str) {
+    std::string tag_name;
+    std::map<std::string, std::string> attributes;
+
+    size_t i = 0;
+    // Extract tag name
+    while (i < tag_str.size() && tag_str[i] != ' ') {
+        tag_name += tag_str[i++];
+    }
+
+    // Parse attributes
+    while (i < tag_str.size()) {
+        // Skip whitespace
+        while (i < tag_str.size() && isspace(tag_str[i])) ++i;
+
+        std::string attr_name;
+        while (i < tag_str.size() && tag_str[i] != '=' && !isspace(tag_str[i])) {
+            attr_name += tag_str[i++];
+        }
+
+        // Skip whitespace or '='
+        while (i < tag_str.size() && (isspace(tag_str[i]) || tag_str[i] == '=')) ++i;
+
+        std::string attr_value;
+        if (i < tag_str.size() && tag_str[i] == '\"') {
+            ++i; // Skip opening quote
+            while (i < tag_str.size() && tag_str[i] != '\"') {
+                attr_value += tag_str[i++];
+            }
+            ++i; // Skip closing quote
+        }
+
+        if (!attr_name.empty()) {
+            attributes[attr_name] = attr_value;
+        }
+    }
+
+    return std::make_pair(tag_name, attributes);
+}
+
 
 std::vector<Tstyle> ParseCSS(const std::string& css) {
     std::vector<Tstyle> css_rules;
@@ -150,8 +191,10 @@ std::shared_ptr<Node> ParseHTML(const std::string& html) {
     // Tokens into DOM Tree
     for (const auto& token : tokens) {
         if (token.type == TAG_OPEN) {
+            auto result = ParseTag(token.value); // Parses tag and attributes
             auto newNode = std::make_shared<Node>();
-            newNode->tag = token.value;
+            newNode->tag = result.first;
+            newNode->attributes = result.second;
             nodeStack.back()->children.push_back(newNode);
             nodeStack.push_back(newNode);
         }
@@ -160,6 +203,7 @@ std::shared_ptr<Node> ParseHTML(const std::string& html) {
         else if (token.type == TEXT)
             nodeStack.back()->text = token.value;
     }
+
 
     return root->children[0]; // return body tag as first instead of blank space
 }

@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <map>
 
 // Parse inital CSS
 struct Tstyle {
@@ -20,6 +21,7 @@ struct finalStyle {
 struct Node {
     std::string tag;
     std::string text;
+    std::map<std::string, std::string> attributes;
     std::vector<std::shared_ptr<Node>> children;
 
     finalStyle style = { {{"padding", "0"}, {"margin", "0"}} };  // Store only resolved style
